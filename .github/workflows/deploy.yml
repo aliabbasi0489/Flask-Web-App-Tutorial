@@ -34,15 +34,16 @@ jobs:
     - name: Deploy App
       run: |
         kubectl apply -f k8s/
-        minikube service flask-service --url
     
     # Verification
     - name: Verify Deployment
       run: |
         kubectl get pods -o wide
         kubectl get services
-        echo "App URL:"
-        minikube service flask-service --url
+        echo "App NodePort URL:"
+        NODE_IP=$(minikube ip)
+        NODE_PORT=$(kubectl get svc flask-service -o=jsonpath="{.spec.ports[0].nodePort}")
+        echo "http://$NODE_IP:$NODE_PORT"
     
     # Monitoring Setup
     - name: Set up Monitoring Stack
@@ -68,9 +69,9 @@ jobs:
         
         # Print access information
         echo "Prometheus URL:"
-        minikube service prometheus-server --url
+        echo "http://$(minikube ip):30090"
         echo "Grafana URL:"
-        minikube service grafana --url
+        echo "http://$(minikube ip):30080"
         echo "Grafana credentials: admin / admin123"
     
     # ArgoCD Setup (Optional)
@@ -80,6 +81,8 @@ jobs:
         kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
         kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
         echo "ArgoCD URL:"
-        minikube service -n argocd argocd-server --url
+        NODE_IP=$(minikube ip)
+        NODE_PORT=$(kubectl get svc argocd-server -n argocd -o=jsonpath="{.spec.ports[0].nodePort}")
+        echo "http://$NODE_IP:$NODE_PORT"
         echo "ArgoCD admin password:"
         kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
