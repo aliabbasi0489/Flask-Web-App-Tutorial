@@ -18,7 +18,7 @@ jobs:
         sudo install minikube-linux-amd64 /usr/local/bin/minikube
         minikube start --driver=docker
         
-    # Build and push Docker image (existing step)
+    # Build and push Docker image
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
@@ -35,21 +35,28 @@ jobs:
       run: |
         kubectl apply -f k8s/
         minikube service flask-service --url
-        - name: Verify Deployment
-  run: |
-    kubectl get pods
-    kubectl get services
-    minikube service flask-service --url
+    
+    # Verification
+    - name: Verify Deployment
+      run: |
+        kubectl get pods
+        kubectl get services
+        minikube service flask-service --url
+    
+    # ArgoCD Setup
     - name: Install ArgoCD
-  run: |
-    kubectl create namespace argocd
-    kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-    kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+      run: |
+        kubectl create namespace argocd
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+    
+    # Monitoring Setup
     - name: Install Monitoring
-  run: |
-    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-    helm install prometheus prometheus-community/prometheus
-    helm install grafana bitnami/grafana
+      run: |
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm install prometheus prometheus-community/prometheus
+        helm install grafana bitnami/grafana
+    
     - name: Show Grafana Password
-  run: |
-    kubectl get secret grafana-admin --namespace default -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 --decode
+      run: |
+        kubectl get secret grafana-admin --namespace default -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 --decode
